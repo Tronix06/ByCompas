@@ -12,7 +12,7 @@ android {
     }
 
     defaultConfig {
-        applicationId = "com.bitronix.bycompas"
+        applicationId = "com.bitronix.bicompas"
         minSdk = 24
         targetSdk = 36
         versionCode = 1
