@@ -7,13 +7,13 @@ import androidx.activity.enableEdgeToEdge
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
-
 import com.bitronix.bycompas.ui.screens.login.LoginScreen
 import com.bitronix.bycompas.ui.screens.home.HomeScreen
 import com.bitronix.bycompas.ui.screens.onboarding.OnboardingScreen
 import com.bitronix.bycompas.ui.screens.onboarding.PermissionsScreen // ¡NUEVO!
 import com.bitronix.bycompas.ui.theme.ByCompasTheme
 import com.google.firebase.auth.FirebaseAuth
+import com.bitronix.bycompas.ui.screens.events.CreateEventScreen
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -32,6 +32,7 @@ class MainActivity : ComponentActivity() {
 
                     // ¡NUEVA PANTALLA DE PERMISOS!
                     composable("permissions") { PermissionsScreen(navController) }
+                    composable("create_event") { CreateEventScreen(navController) }
 
                     composable("home") { HomeScreen(navController) }
                     composable("calendar") { /* Próximamente */ }
