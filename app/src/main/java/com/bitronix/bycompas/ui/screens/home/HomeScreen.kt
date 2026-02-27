@@ -1,5 +1,7 @@
 package com.bitronix.bycompas.ui.screens.home
 
+import android.Manifest
+import android.content.pm.PackageManager
 import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -20,21 +22,23 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.content.ContextCompat
 import androidx.navigation.NavController
 import com.google.maps.android.compose.GoogleMap
-import com.google.maps.android.compose.Marker
-import com.google.maps.android.compose.MarkerState
+import com.google.maps.android.compose.MapProperties
+import com.google.maps.android.compose.MapUiSettings
 import com.google.maps.android.compose.rememberCameraPositionState
 import com.google.android.gms.maps.model.CameraPosition
 import com.google.android.gms.maps.model.LatLng
+import com.google.android.gms.location.LocationServices
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(navController: NavController) {
-    var selectedItem by remember { mutableIntStateOf(1) } // 1 es el Radar (Centro)
-    val items = listOf("Eventos", "Radar", "Perfil") // Cambiado de Partidos a Eventos
+    var selectedItem by remember { mutableIntStateOf(1) }
+    val items = listOf("Eventos", "Radar", "Perfil")
     val icons = listOf(Icons.Filled.DateRange, Icons.Filled.LocationOn, Icons.Filled.Person)
 
     Scaffold(
@@ -76,22 +80,45 @@ fun HomeScreen(navController: NavController) {
 
 @Composable
 fun RadarScreenContent() {
-    val ciudadEjemplo = LatLng(40.416775, -3.703790)
+    val context = LocalContext.current
+
+    // 1. Comprobamos si el usuario nos dio el permiso en la pantalla anterior
+    val hasLocationPermission = ContextCompat.checkSelfPermission(
+        context,
+        Manifest.permission.ACCESS_FINE_LOCATION
+    ) == PackageManager.PERMISSION_GRANTED || ContextCompat.checkSelfPermission(
+        context,
+        Manifest.permission.ACCESS_COARSE_LOCATION
+    ) == PackageManager.PERMISSION_GRANTED
+
+    // 2. Posición por defecto (España general) por si aún no tenemos ubicación
+    val defaultLocation = LatLng(40.4167, -3.7032)
     val cameraPositionState = rememberCameraPositionState {
-        position = CameraPosition.fromLatLngZoom(ciudadEjemplo, 12f)
+        position = CameraPosition.fromLatLngZoom(defaultLocation, 5f) // Zoom lejano
+    }
+
+    // 3. Magia: Si hay permiso, pedimos la ubicación real y centramos el mapa
+    LaunchedEffect(hasLocationPermission) {
+        if (hasLocationPermission) {
+            val fusedLocationClient = LocationServices.getFusedLocationProviderClient(context)
+            fusedLocationClient.lastLocation.addOnSuccessListener { location ->
+                if (location != null) {
+                    val myLocation = LatLng(location.latitude, location.longitude)
+                    // Centramos la cámara en tu ubicación con un zoom cercano (14f)
+                    cameraPositionState.position = CameraPosition.fromLatLngZoom(myLocation, 14f)
+                }
+            }
+        }
     }
 
     Box(modifier = Modifier.fillMaxSize()) {
         GoogleMap(
             modifier = Modifier.fillMaxSize(),
-            cameraPositionState = cameraPositionState
-        ) {
-            Marker(
-                state = MarkerState(position = ciudadEjemplo),
-                title = "Tu ubicación",
-                snippet = "Buscando deportistas cerca"
-            )
-        }
+            cameraPositionState = cameraPositionState,
+            // 4. ¡Encendemos el puntito azul de Google Maps y el botón de centrar!
+            properties = MapProperties(isMyLocationEnabled = hasLocationPermission),
+            uiSettings = MapUiSettings(myLocationButtonEnabled = hasLocationPermission, zoomControlsEnabled = true)
+        )
 
         ExtendedFloatingActionButton(
             onClick = { /* Abrir filtros */ },
@@ -111,7 +138,6 @@ fun MatchesScreenContent() {
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        // Textos adaptados para ser inclusivos con cualquier deporte
         Text("Tus Actividades", fontSize = 24.sp, fontWeight = FontWeight.Bold)
         Text("Aquí verás los eventos deportivos en los que estás inscrito.", fontSize = 16.sp)
     }
@@ -128,6 +154,7 @@ fun ProfileScreenContent(navController: NavController) {
     var userEmail by remember { mutableStateOf(currentUser?.email ?: "") }
     var userRating by remember { mutableStateOf(0.0) }
     var radarRadius by remember { mutableFloatStateOf(15f) }
+    var userSports by remember { mutableStateOf<List<String>>(emptyList()) }
     var isLoading by remember { mutableStateOf(true) }
     var showDeleteDialog by remember { mutableStateOf(false) }
 
@@ -139,6 +166,10 @@ fun ProfileScreenContent(navController: NavController) {
                         userName = document.getString("name") ?: "Deportista Anónimo"
                         userRating = document.getDouble("rating") ?: 5.0
                         radarRadius = document.getDouble("radarRadius")?.toFloat() ?: 15f
+                        val sportsFromDb = document.get("sports") as? List<String>
+                        if (sportsFromDb != null) {
+                            userSports = sportsFromDb
+                        }
                     }
                     isLoading = false
                 }
@@ -163,7 +194,6 @@ fun ProfileScreenContent(navController: NavController) {
             .padding(16.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        // --- 1. CABECERA DE PERFIL ---
         Box(
             modifier = Modifier
                 .size(100.dp)
@@ -190,16 +220,20 @@ fun ProfileScreenContent(navController: NavController) {
 
         Spacer(modifier = Modifier.height(32.dp))
 
-        // --- 2. GESTIÓN DE DEPORTES (Enfoque Multideporte) ---
         Card(modifier = Modifier.fillMaxWidth()) {
             Column(modifier = Modifier.padding(16.dp)) {
                 Text("Mis Deportes", fontSize = 20.sp, fontWeight = FontWeight.Bold)
                 Spacer(modifier = Modifier.height(8.dp))
-                // Ejemplos visuales de que soporta múltiples disciplinas y métricas
-                Text("- Pádel (Nivel Intermedio)")
-                Text("- Running (Ritmo 5:30 min/km)")
-                Text("- Baloncesto (Avanzado)")
-                Spacer(modifier = Modifier.height(8.dp))
+
+                if (userSports.isEmpty()) {
+                    Text("Aún no has configurado ningún deporte.", color = Color.Gray)
+                } else {
+                    userSports.forEach { deporte ->
+                        Text("- $deporte", fontSize = 16.sp, modifier = Modifier.padding(vertical = 2.dp))
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(12.dp))
                 Button(onClick = { /* Abrir ventana de añadir deportes */ }) {
                     Text("Gestionar mis deportes")
                 }
@@ -208,11 +242,9 @@ fun ProfileScreenContent(navController: NavController) {
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        // --- 3. CONFIGURACIÓN DEL RADAR ---
         Card(modifier = Modifier.fillMaxWidth()) {
             Column(modifier = Modifier.padding(16.dp)) {
                 Text("Distancia del Radar: ${radarRadius.toInt()} km", fontSize = 20.sp, fontWeight = FontWeight.Bold)
-                // CORRECCIÓN APLICADA AQUÍ:
                 Text("Recibir notificaciones de eventos deportivos en este radio.", fontSize = 14.sp, color = Color.Gray)
                 Spacer(modifier = Modifier.height(8.dp))
 
@@ -236,7 +268,6 @@ fun ProfileScreenContent(navController: NavController) {
 
         Spacer(modifier = Modifier.height(32.dp))
 
-        // --- 4. ZONA DE PELIGRO ---
         OutlinedButton(
             onClick = {
                 auth.signOut()
