@@ -1,9 +1,20 @@
+// 1. EL IMPORT SIEMPRE ARRIBA DEL TODO
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
     id("com.google.gms.google-services")
 }
+
+// 2. LEEMOS LA CAJA FUERTE
+val localProperties = Properties()
+val localPropertiesFile = rootProject.file("local.properties")
+if (localPropertiesFile.exists()) {
+    localProperties.load(localPropertiesFile.inputStream())
+}
+val mapsApiKey = localProperties.getProperty("MAPS_API_KEY") ?: ""
 
 android {
     namespace = "com.bitronix.bycompas"
@@ -12,11 +23,15 @@ android {
     }
 
     defaultConfig {
+        // Fíjate que aquí se mantiene la 'i' para que conecte con Firebase. ¡Perfecto!
         applicationId = "com.bitronix.bicompas"
         minSdk = 24
         targetSdk = 36
         versionCode = 1
         versionName = "1.0"
+
+        // 3. PASAMOS LA CLAVE AL MANIFEST
+        manifestPlaceholders["MAPS_API_KEY"] = mapsApiKey
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -62,4 +77,6 @@ dependencies {
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)
     debugImplementation(libs.androidx.compose.ui.tooling)
     debugImplementation(libs.androidx.compose.ui.test.manifest)
+    implementation("androidx.navigation:navigation-compose:2.7.7")
+    implementation("com.google.maps.android:maps-compose:4.3.3")
 }
