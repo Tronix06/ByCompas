@@ -16,6 +16,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.bitronix.bycompas.R
+import com.bitronix.bycompas.navigation.Screen
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 
@@ -112,12 +113,17 @@ fun LoginScreen(navController: NavController) {
             onClick = {
                 if (email.isNotEmpty() && password.isNotEmpty()) {
                     if (isLoginMode) {
-                        // SI INICIA SESIÓN -> VA DIRECTO A HOME
+                        // SI INICIA SESIÓN -> VA DIRECTO A HOME_MAIN
                         auth.signInWithEmailAndPassword(email, password)
                             .addOnCompleteListener { task ->
                                 if (task.isSuccessful) {
                                     Toast.makeText(context, "¡Sesión iniciada!", Toast.LENGTH_SHORT).show()
-                                    navController.navigate("home")
+
+                                    // CORRECCIÓN AQUÍ: Usamos "home_main" que es lo que pusimos en MainActivity
+                                    navController.navigate("home_main") {
+                                        // Esto borra el Login del historial para que no pueda volver atrás
+                                        popUpTo(Screen.Login.route) { inclusive = true }
+                                    }
                                 } else {
                                     Toast.makeText(context, "Error: ${task.exception?.message}", Toast.LENGTH_LONG).show()
                                 }
@@ -135,14 +141,17 @@ fun LoginScreen(navController: NavController) {
                                             "email" to email,
                                             "rating" to 5.0,
                                             "totalReviews" to 0,
-                                            "radarRadius" to 15.0
+                                            "radarRadius" to 15.0,
+                                            "sports" to emptyList<String>() // Añadimos esto para evitar errores luego
                                         )
 
                                         if (userId != null) {
                                             db.collection("users").document(userId).set(userMap)
                                                 .addOnSuccessListener {
-                                                    // ¡NUEVO! Lo mandamos a que elija sus deportes
-                                                    navController.navigate("onboarding")
+                                                    // Al Onboarding
+                                                    navController.navigate("onboarding") {
+                                                        popUpTo(Screen.Login.route) { inclusive = true }
+                                                    }
                                                 }
                                         }
                                     } else {
