@@ -16,6 +16,14 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.google.firebase.auth.FirebaseAuth
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.window.Dialog
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.filled.LocationOn
+import com.google.android.gms.maps.model.CameraPosition
+import com.google.android.gms.maps.model.LatLng
+import com.google.maps.android.compose.GoogleMap
+import com.google.maps.android.compose.rememberCameraPositionState
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.GeoPoint
 
@@ -35,6 +43,11 @@ fun CreateEventScreen(navController: NavController) {
     var notes by remember { mutableStateOf("") }
     var expandedSport by remember { mutableStateOf(false) }
     var isPublishing by remember { mutableStateOf(false) }
+    var showMapDialog by remember { mutableStateOf(false) }
+
+    val cameraPositionState = rememberCameraPositionState {
+        position = CameraPosition.fromLatLngZoom(LatLng(40.41, -3.70), 12f)
+    }
 
     val sportsOptions = listOf("⚽ Fútbol", "🎾 Pádel", "🏃‍♂️ Running", "🏀 Baloncesto")
     val levelsOptions = listOf("Principiante", "Intermedio", "Avanzado")
@@ -137,7 +150,60 @@ fun CreateEventScreen(navController: NavController) {
                 minLines = 3
             )
 
-            Spacer(modifier = Modifier.weight(1f))
+            // Selector de Ubicación fluido mediante ventana (Dialog)
+            Text("Ubicación del evento", fontWeight = FontWeight.Medium)
+            
+            OutlinedButton(
+                onClick = { showMapDialog = true },
+                modifier = Modifier.fillMaxWidth().height(56.dp)
+            ) {
+                Icon(Icons.Default.LocationOn, contentDescription = null, tint = Color.Red)
+                Spacer(modifier = Modifier.width(8.dp))
+                Text("Seleccionar ubicación en el mapa")
+            }
+
+            if (showMapDialog) {
+                Dialog(onDismissRequest = { showMapDialog = false }) {
+                    Surface(
+                        shape = RoundedCornerShape(16.dp),
+                        color = MaterialTheme.colorScheme.surface,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(450.dp)
+                    ) {
+                        Column {
+                            Box(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .fillMaxWidth()
+                            ) {
+                                GoogleMap(
+                                    modifier = Modifier.fillMaxSize(),
+                                    cameraPositionState = cameraPositionState
+                                )
+                                // Chincheta flotante estática en el centro
+                                Icon(
+                                    imageVector = Icons.Default.LocationOn,
+                                    contentDescription = "Pin de ubicación",
+                                    tint = Color.Red,
+                                    modifier = Modifier
+                                        .align(Alignment.Center)
+                                        .padding(bottom = 36.dp)
+                                        .size(44.dp)
+                                )
+                            }
+                            Button(
+                                onClick = { showMapDialog = false },
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(16.dp)
+                            ) {
+                                Text("Confirmar Ubicación")
+                            }
+                        }
+                    }
+                }
+            }
 
             // Botón de Publicar
             Button(
@@ -146,6 +212,7 @@ fun CreateEventScreen(navController: NavController) {
                     if (currentUser != null && sport.isNotEmpty() && date.isNotEmpty()) {
                         isPublishing = true
 
+                        val targetLocation = cameraPositionState.position.target
                         // Creamos el objeto del evento
                         val eventMap = hashMapOf(
                             "sport" to sport,
@@ -156,7 +223,7 @@ fun CreateEventScreen(navController: NavController) {
                             "notes" to notes,
                             "creatorId" to currentUser.uid,
                             "status" to "open",
-                            "location" to GeoPoint(40.41, -3.70), // Ubicación por defecto (Madrid)
+                            "location" to GeoPoint(targetLocation.latitude, targetLocation.longitude),
                             "participants" to listOf(currentUser.uid),
                             "pendingRequests" to emptyList<String>()
                         )

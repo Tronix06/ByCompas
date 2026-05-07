@@ -6,6 +6,7 @@ plugins {
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
     id("com.google.gms.google-services")
+    kotlin("kapt")
 }
 
 // 2. LEEMOS LA CAJA FUERTE
@@ -32,6 +33,10 @@ android {
 
         // 3. PASAMOS LA CLAVE AL MANIFEST
         manifestPlaceholders["MAPS_API_KEY"] = mapsApiKey
+        
+        // 4. PASAMOS EL ID DE GOOGLE A LOS RECURSOS
+        val webClientId = localProperties.getProperty("WEB_CLIENT_ID") ?: ""
+        resValue("string", "bycompas_web_client_id", webClientId)
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -66,10 +71,12 @@ dependencies {
     implementation(libs.androidx.compose.ui.graphics)
     implementation(libs.androidx.compose.ui.tooling.preview)
     implementation(libs.androidx.compose.material3)
-    implementation(platform("com.google.firebase:firebase-bom:34.9.0"))
+    implementation(platform(libs.firebase.bom))
     implementation("com.google.firebase:firebase-analytics")
     implementation("com.google.firebase:firebase-auth")
     implementation("com.google.firebase:firebase-firestore")
+    implementation(libs.firebase.storage)
+    implementation(libs.coil.compose)
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
@@ -80,6 +87,12 @@ dependencies {
     implementation("androidx.navigation:navigation-compose:2.7.7")
     implementation("com.google.maps.android:maps-compose:4.3.3")
     implementation("com.google.android.gms:play-services-location:21.2.0")
+    implementation(libs.play.services.auth)
+
+    // --- ROOM DATABASE ---
+    implementation(libs.room.runtime)
+    implementation(libs.room.ktx)
+    kapt(libs.room.compiler)
 
     implementation("androidx.compose.material:material-icons-extended")
 }

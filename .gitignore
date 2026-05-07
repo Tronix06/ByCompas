@@ -1,15 +1,43 @@
+# --- ANDROID STUDIO & IDE ---
+.idea/
 *.iml
-.gradle
-/local.properties
-/.idea/caches
-/.idea/libraries
-/.idea/modules.xml
-/.idea/workspace.xml
-/.idea/navEditor.xml
-/.idea/assetWizardSettings.xml
+*.ipr
+*.iws
 .DS_Store
-/build
-/captures
-.externalNativeBuild
-.cxx
+captures/
+.externalNativeBuild/
+.cxx/
+/shelf/
+/assetWizardSettings.xml
+
+# --- GRADLE & BUILD ---
+.gradle/
+build/
+/*/build/
+gradle-app.setting
+!gradle-wrapper.jar
+
+# --- SENSITIVE & SECRETS (IMPORTANTE) ---
+# Clave de Google Maps y rutas locales
 local.properties
+
+# Configuración de Firebase (Privado)
+app/google-services.json
+
+# Archivos de firma (Keystores)
+*.jks
+*.keystore
+*.p12
+*.pem
+
+# Archivos de contraseñas o secretos adicionales
+secrets.xml
+
+# --- KOTLIN ---
+.kotlin/
+*.kotlin_module
+
+# --- TEMPORARY & LOGS ---
+*.log
+*.temp
+*.tmp
