@@ -19,6 +19,6 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "ByCompas"
+rootProject.name = "ByCompa"
 include(":app")
  

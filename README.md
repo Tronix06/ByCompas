@@ -1,5 +1,5 @@
 # ByCompas 🧭🏃‍♂️
-> El radar multideporte definitivo para conectar a deportistas locales. Encuentra compañeros, organiza partidos y no vuelvas a quedarte en el banquillo.
+> El radar multideporte definitivo para conectar a deportistas locales. Encuentra compañeros, organiza eventos y no vuelvas a quedarte en el banquillo.
 
 ![Android](https://img.shields.io/badge/Android-3DDC84?style=for-the-badge&logo=android&logoColor=white)
 ![Kotlin](https://img.shields.io/badge/kotlin-%237F52FF.svg?style=for-the-badge&logo=kotlin&logoColor=white)

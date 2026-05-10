@@ -18,7 +18,7 @@ if (localPropertiesFile.exists()) {
 val mapsApiKey = localProperties.getProperty("MAPS_API_KEY") ?: ""
 
 android {
-    namespace = "com.bitronix.bycompas"
+    namespace = "com.bitronix.bycompa"
     compileSdk {
         version = release(36)
     }
@@ -36,7 +36,7 @@ android {
         
         // 4. PASAMOS EL ID DE GOOGLE A LOS RECURSOS
         val webClientId = localProperties.getProperty("WEB_CLIENT_ID") ?: ""
-        resValue("string", "bycompas_web_client_id", webClientId)
+        resValue("string", "bycompa_web_client_id", webClientId)
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
