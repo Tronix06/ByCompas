@@ -918,6 +918,7 @@ fun ChatListTemporales(
 
     LaunchedEffect(currentUser) {
         currentUser?.let { user ->
+            val triggeredWarnings = mutableSetOf<String>()
             db.collection("chats")
                 .whereArrayContains("participants", user.uid)
                 .addSnapshotListener { snap, error ->
@@ -944,9 +945,10 @@ fun ChatListTemporales(
 
                             if (now > closureTime && !isExpired) {
                                 db.collection("chats").document(doc.id).update("isExpired", true)
-                            } else if (now > oneHourBeforeClosure && !warningSent && !isExpired) {
+                            } else if (now > oneHourBeforeClosure && !warningSent && !isExpired && !triggeredWarnings.contains(doc.id)) {
+                                triggeredWarnings.add(doc.id)
                                 db.collection("chats").document(doc.id).update("warningSent", true)
-                                db.collection("chats").document(doc.id).collection("messages").add(hashMapOf(
+                                db.collection("chats").document(doc.id).collection("messages").document("warning_1h").set(hashMapOf(
                                     "senderId" to "system",
                                     "text" to "⚠️ Este chat se cerrará automáticamente en 1h.",
                                     "timestamp" to com.google.firebase.firestore.FieldValue.serverTimestamp()

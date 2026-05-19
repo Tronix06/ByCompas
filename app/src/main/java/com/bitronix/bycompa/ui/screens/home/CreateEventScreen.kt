@@ -11,6 +11,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -19,6 +20,11 @@ import com.google.firebase.auth.FirebaseAuth
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.window.Dialog
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.background
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.material.icons.filled.LocationOn
 import com.google.android.gms.maps.model.CameraPosition
 import com.google.android.gms.maps.model.LatLng
@@ -31,6 +37,7 @@ import com.google.firebase.firestore.GeoPoint
 @Composable
 fun CreateEventScreen(navController: NavController) {
     val context = LocalContext.current
+    val focusManager = LocalFocusManager.current
     val db = FirebaseFirestore.getInstance()
     val auth = FirebaseAuth.getInstance()
 
@@ -162,91 +169,106 @@ fun CreateEventScreen(navController: NavController) {
                 Text("Seleccionar ubicación en el mapa")
             }
 
-            if (showMapDialog) {
-                Dialog(onDismissRequest = { showMapDialog = false }) {
-                    Surface(
-                        shape = RoundedCornerShape(16.dp),
-                        color = MaterialTheme.colorScheme.surface,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(450.dp)
-                    ) {
-                        Column {
-                            Box(
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .fillMaxWidth()
-                            ) {
-                                GoogleMap(
-                                    modifier = Modifier.fillMaxSize(),
-                                    cameraPositionState = cameraPositionState
-                                )
-                                // Chincheta flotante estática en el centro
-                                Icon(
-                                    imageVector = Icons.Default.LocationOn,
-                                    contentDescription = "Pin de ubicación",
-                                    tint = Color.Red,
-                                    modifier = Modifier
-                                        .align(Alignment.Center)
-                                        .padding(bottom = 36.dp)
-                                        .size(44.dp)
-                                )
-                            }
-                            Button(
-                                onClick = { showMapDialog = false },
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(16.dp)
-                            ) {
-                                Text("Confirmar Ubicación")
-                            }
-                        }
-                    }
-                }
-            }
+            // Diálogo eliminado de aquí para evitar ghost nodes en la jerarquía del Column
 
             // Botón de Publicar
-            Button(
-                onClick = {
-                    val currentUser = auth.currentUser
-                    if (currentUser != null && sport.isNotEmpty() && date.isNotEmpty()) {
-                        isPublishing = true
+            val premiumGradient = Brush.linearGradient(listOf(MaterialTheme.colorScheme.primary, Color(0xFF1565C0)))
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(56.dp)
+                    .clip(RoundedCornerShape(28.dp))
+                    .background(premiumGradient)
+                    .clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null // Elimina completamente cualquier rectángulo de enfoque o efecto ripple gris
+                    ) {
+                        focusManager.clearFocus()
+                        if (isPublishing) return@clickable
+                        val currentUser = auth.currentUser
+                        if (currentUser != null && sport.isNotEmpty() && date.isNotEmpty()) {
+                            isPublishing = true
 
-                        val targetLocation = cameraPositionState.position.target
-                        // Creamos el objeto del evento
-                        val eventMap = hashMapOf(
-                            "sport" to sport,
-                            "level" to level,
-                            "date" to date,
-                            "time" to time,
-                            "availableSlots" to (slots.toIntOrNull() ?: 0),
-                            "notes" to notes,
-                            "creatorId" to currentUser.uid,
-                            "status" to "open",
-                            "location" to GeoPoint(targetLocation.latitude, targetLocation.longitude),
-                            "participants" to listOf(currentUser.uid),
-                            "pendingRequests" to emptyList<String>()
-                        )
+                            val targetLocation = cameraPositionState.position.target
+                            // Creamos el objeto del evento
+                            val eventMap = hashMapOf(
+                                "sport" to sport,
+                                "level" to level,
+                                "date" to date,
+                                "time" to time,
+                                "availableSlots" to (slots.toIntOrNull() ?: 0),
+                                "notes" to notes,
+                                "creatorId" to currentUser.uid,
+                                "status" to "open",
+                                "location" to GeoPoint(targetLocation.latitude, targetLocation.longitude),
+                                "participants" to listOf(currentUser.uid),
+                                "pendingRequests" to emptyList<String>()
+                            )
 
-                        db.collection("events")
-                            .add(eventMap)
-                            .addOnSuccessListener {
-                                Toast.makeText(context, "¡Evento publicado!", Toast.LENGTH_SHORT).show()
-                                navController.popBackStack()
-                            }
-                            .addOnFailureListener {
-                                isPublishing = false
-                                Toast.makeText(context, "Error al publicar", Toast.LENGTH_SHORT).show()
-                            }
-                    } else {
-                        Toast.makeText(context, "Rellena los campos básicos", Toast.LENGTH_SHORT).show()
-                    }
-                },
-                modifier = Modifier.fillMaxWidth().height(56.dp),
-                enabled = !isPublishing
+                            db.collection("events")
+                                .add(eventMap)
+                                .addOnSuccessListener {
+                                    Toast.makeText(context, "¡Evento publicado!", Toast.LENGTH_SHORT).show()
+                                    navController.popBackStack()
+                                }
+                                .addOnFailureListener {
+                                    isPublishing = false
+                                    Toast.makeText(context, "Error al publicar", Toast.LENGTH_SHORT).show()
+                                }
+                        } else {
+                            Toast.makeText(context, "Rellena los campos básicos", Toast.LENGTH_SHORT).show()
+                        }
+                    },
+                contentAlignment = Alignment.Center
             ) {
-                if (isPublishing) CircularProgressIndicator(color = Color.White)
-                else Text("Publicar Evento", fontSize = 18.sp)
+                if (isPublishing) {
+                    Text("Publicando...", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                } else {
+                    Text("Publicar Evento", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                }
+            }
+        }
+    }
+
+    if (showMapDialog) {
+        Dialog(onDismissRequest = { showMapDialog = false }) {
+            Surface(
+                shape = RoundedCornerShape(16.dp),
+                color = MaterialTheme.colorScheme.surface,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(450.dp)
+            ) {
+                Column {
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .fillMaxWidth()
+                    ) {
+                        GoogleMap(
+                            modifier = Modifier.fillMaxSize(),
+                            cameraPositionState = cameraPositionState
+                        )
+                        // Chincheta flotante estática en el centro
+                        Icon(
+                            imageVector = Icons.Default.LocationOn,
+                            contentDescription = "Pin de ubicación",
+                            tint = Color.Red,
+                            modifier = Modifier
+                                .align(Alignment.Center)
+                                .padding(bottom = 36.dp)
+                                .size(44.dp)
+                        )
+                    }
+                    Button(
+                        onClick = { showMapDialog = false },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp)
+                    ) {
+                        Text("Confirmar Ubicación")
+                    }
+                }
             }
         }
     }

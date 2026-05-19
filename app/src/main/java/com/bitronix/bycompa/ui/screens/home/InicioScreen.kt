@@ -112,20 +112,34 @@ fun InicioScreen(navController: NavController, onNavigateToTab: (String) -> Unit
                 isLoading = false
             }
 
+        val cleanSport = { s: String ->
+            s.replace(Regex("[^a-zA-Z0-9áéíóúÁÉÍÓÚñÑ ]"), "").lowercase().trim()
+        }
+        val favSportsClean = favSports.map(cleanSport).filter { it.isNotEmpty() }
+
         // Listener 2: Recomendados
-        val recommendedListener = if (favSports.isNotEmpty()) {
+        val recommendedListener = if (favSportsClean.isNotEmpty()) {
             db.collection("events")
-                .whereIn("sport", favSports)
-                .limit(10)
+                .whereEqualTo("status", "open")
                 .addSnapshotListener { snap, _ ->
                     val events = snap?.documents?.mapNotNull { 
                         it.toObject(EventData::class.java)?.copy(id = it.id)
                     } ?: emptyList()
                     
                     recommendedEvents = events
-                        .filter { it.participants.size < it.availableSlots }
+                        .filter { event ->
+                            val eventSportClean = cleanSport(event.sport)
+                            favSportsClean.any { fav ->
+                                fav == eventSportClean || fav.contains(eventSportClean) || eventSportClean.contains(fav)
+                            }
+                        }
+                        .filter { it.availableSlots > 0 }
+                        .filter { it.creatorId != uid }
+                        .filter { !it.participants.contains(uid) }
+                        .filter { !it.pendingRequests.contains(uid) }
                         .filter { TimeUtils.getMillisFromDate(it.date, it.time) > currentTime }
                         .sortedBy { TimeUtils.getMillisFromDate(it.date, it.time) }
+                        .take(10)
                 }
         } else null
 
